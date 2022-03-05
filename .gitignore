@@ -47,3 +47,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+private/
+learningDashboard/R/hello.R
+learningDashboard/man/hello.Rd
