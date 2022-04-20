@@ -1,0 +1,177 @@
+
+```{r}
+tx5 <- jsonlite::fromJSON("https://www.dropbox.com/s/9yxq2g1a5vdywu6/tx5.json?dl=1") |>
+  econIDV::as.Data() # this is only for this course to mark the object a data class
+```
+
+```{r}
+plt <- function(){
+  plot_ly(tx5, x = ~date, y = ~median) %>%
+    add_lines(linetype = ~city) -> plt
+  plt
+}
+gg <- function(){
+  ggplot(tx5, aes(x=date, y=median)) +
+    geom_line(aes(linetype=city)) -> gg
+  gg
+}
+```
+
+```{r}
+library(plotly)
+plt() -> pp
+pp$x
+plt()$x |> View()
+plt() |> showX()
+```
+
+```{r}
+pp$x$visdat$`1a7f5956b416`()
+```
+
+```{r}
+Visit() -> visit
+visit$plotlyR()
+```
+
+```{r}
+plt() |> plotly::style(..., 2) -> plt2
+```
+
+```{r}
+pt = econIDV::PlotlyTools()
+plt()
+pt$query_trace$Scatter()
+pt$query_Scatter()
+```
+
+```{r}
+# check all available attributes
+pt$query_Scatter()
+```
+
+
+```{r}
+#scatter-type
+plt() |> plotly::style(
+  type="scatter",
+  showlegend=F,
+  legendgrouptitle=list(
+    font=list(
+      size=5
+    )
+  )
+)
+```
+
+
+
+```{r}
+# check first level attribute:
+pt$query_Scatter(
+  "#scatter-[^-]*$", regex=T
+) 
+# or
+pt$query_Scatter(1)
+
+# To learn the detail of attribute(s)
+pt$query_Scatter("#scatter-showlegend",
+  onlyTitle = F)
+
+# To learn the 2 level attribute under showlegend
+pt$query_Scatter(
+  "#scatter-legendgrouptitle-[^-]*$", regex=T, onlyTitle = F
+)
+```
+
+```{r}
+plt()
+pt$query_Scatter(1)
+pt$query_Scatter("#scatter-showlegend", onlyTitle = F)
+```
+
+```{r}
+plt() |> 
+  plotly::style(
+    showlegend=F,
+    mode="lines+markers",
+    marker=list(
+      size=5
+    )
+  )
+```
+
+```{r}
+plt2 <- function(){
+  plot_ly(tx5, x = ~date, y = ~median) %>%
+    add_lines(
+      name="five cities",
+      linetype = ~city,
+       showlegend=F,
+    mode="lines+markers",
+    marker=list(
+      size=5
+    )) -> plt
+  plt
+}
+```
+
+```{r}
+plt2()
+```
+
+
+```{r}
+pt$query_Scatter("marker")
+pt$query_Scatter("marker-[^-]*$",
+  regex=T)
+```
+
+
+```{r}
+pt$query_layout$Legend()
+pt$query_Legend()
+pt$query_Legend("#layout-legend-bgcolor", onlyTitle = F)
+plt() |> 
+  plotly::layout(
+    legend=list(
+      bgcolor="grey"
+    )
+  )
+```
+
+```{r}
+pt$query_Scatter(
+  "hover[^-]*$", regex=T
+)
+```
+
+```{r}
+tx5$month |> as.character() -> monthText
+plt() |>
+  plotly::style(
+    hoverinfo="x+y+text", 
+    hovertext=monthText,
+    hovertemplate="%{y}元<extra></extra>"
+  )
+```
+
+```{r}
+plot_ly(tx5, x = ~date, y = ~median) %>%
+    add_lines(
+      name="five cities",
+      linetype = ~city,
+       showlegend=F,
+    mode="lines+markers",
+    marker=list(
+      size=5
+    )) -> plt
+  plt
+```
+
+
+
+
+
+
+

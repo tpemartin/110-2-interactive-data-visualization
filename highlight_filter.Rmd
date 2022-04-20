@@ -1,0 +1,144 @@
+
+```{r}
+dashboardPage(
+    dashboardHeader(
+      title="經濟數據儀表板"
+    ),
+    dashboardSidebar(),
+    dashboardBody()
+  ) 
+```
+
+```{r}
+example = econIDV::Examples()
+example$agricultureProductPrices()
+example$agricultureProductPricesEnv$attach()
+```
+
+
+```{r}
+download_agriculturePrices()
+```
+
+
+```{r}
+df_agPricesHighlight =
+  plotly::highlight_key(
+    df_agPrices, # 原始 data frame
+    key=~Item2, # highlight的依據。
+    group="項目"
+  )
+```
+
+```{r}
+df_agPrices |>
+  plt_agPrices() -> plt0
+plt0
+```
+
+```{r}
+df_agPricesHighlight |>
+  plt_agPrices() 
+```
+
+```{r}
+plt_highlight <- list()
+# With default highlight
+#  You can select multiple traces by holding shift + trigger action
+df_agPricesHighlight |>
+  plt_agPrices() -> plt_highlight[[1]]
+plt_highlight[[1]]
+# Highlight with off 
+df_agPricesHighlight |>
+  plt_agPrices() |>
+  highlight(
+    off="plotly_doubleclick"
+  ) -> plt_highlight[[2]]
+plt_highlight[[2]]
+# Highlight with selectize 
+df_agPricesHighlight |>
+  plt_agPrices() |>
+  highlight(
+    selectize = TRUE
+  ) -> plt_highlight[[3]]
+plt_highlight[[3]]
+# Highlight with color
+df_agPricesHighlight |>
+  plt_agPrices() |>
+  highlight(
+    off="plotly_doubleclick",
+    selectize = T
+  ) -> plt_highlight[[4]]
+plt_highlight[[4]] |> econIDV::showWidget()
+```
+
+```{r}
+list(
+shinydashboard::box(title="預設" (.x), (.y) plt_highlight[[1]]),
+shinydashboard::box(title="Double click解除Highlight", plt_highlight[[2]]),
+  ,)
+```
+
+
+```{r}
+purrr::map2(
+  c("預設", "Double click解除Highlight", "Selectize", "Color control"),
+  plt_highlight,
+  ~ shinydashboard::box(.y, title = .x)
+) -> box_highlight
+```
+
+```{r}
+dashboard_agPrices() |> econIDV::showWidget()
+```
+
+
+```{r}
+example$agricultureProductPricesEnv$detach()
+```
+
+```{r}
+myenv = new.env()
+attach(myenv)
+```
+
+## filter
+
+
+```{r}
+crosstalk::is.SharedData(df_agPricesHighlight)
+```
+
+```{r}
+library(crosstalk)
+library(shinydashboard)
+# filter data requires no key
+df_agPricesHighlight2 <- 
+  plotly::highlight_key(df_agPrices)
+
+filterColumn <- crosstalk::bscols(
+  widths = c(12, 12),
+  filter_select("Item2", "項目", df_agPricesHighlight2, ~Item2),
+  filter_checkbox("month", "月份", df_agPricesHighlight2, ~month, inline = TRUE)
+  )
+widgetFilter <- bscols(
+  widths = c(5, 7), filterColumn, 
+  df_agPricesHighlight2 |>
+    plt_agPrices()
+) 
+dashboard_agPrices(
+  box(widgetFilter, width=12)) |> econIDV::showWidget()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

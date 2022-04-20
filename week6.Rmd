@@ -1,0 +1,135 @@
+
+```{r}
+library(shiny)
+library(shinydashboard) # 要有library(shiny)才能自由完全運作
+source("support/chapter4.R")
+```
+
+```{r}
+dashboard0() |> econIDV::showWidget()
+```
+
+## tab menu
+```{r}
+dashboardSidebar_custom <- function(){
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Dashboard", tabName = "dashboard", icon = shiny::icon("dashboard")),
+      menuItem("Widgets", tabName = "widgets", icon = shiny::icon("th"))
+    )
+  )
+}
+```
+
+```{r}
+dashboard1()
+```
+
+## body
+
+```{r}
+dashboardBody_custom <- function(){
+  dashboardBody(
+    shiny::fluidRow(
+      box(
+        h4("box只是張卡片")
+      )
+    ), 
+    shiny::fluidRow(
+      tabBox(
+        title="tabBox是有分頁的卡片",
+        shiny::tabPanel(
+          "第一頁", "第一頁內容"
+        ),
+        shiny::tabPanel(
+          "第二頁", "第二頁內容"
+        )
+      )
+    ),
+    shiny::fluidRow(
+      infoBox("infoBox", "顯示重要訊息的方塊", icon = shiny::icon("credit-card"))
+    ),
+    shiny::fluidRow(
+       valueBox("強調訊息值的方塊", "valueBox", icon = shiny::icon("credit-card"))
+    )
+  )
+}
+```
+
+```{r}
+dashboard1()
+```
+
+##
+
+```{r}
+fluidRow(
+  column(width = 4, ),
+  column(width = 5, ),
+  column(widht = 3, )
+)
+```
+
+
+```{r}
+dashboardBody_custom <- function() {
+  dashboardBody(
+    fluidRow(
+      box(
+        title = "fluidRow, no column", width = 6, status = "primary",
+        "width=6"
+      ),
+      box(
+        title="fluidRow, no column",
+        status = "warning", width = 6,
+        "width=6"
+      )
+    ),
+    fluidRow(
+      column(
+        width = 5,
+        box(
+          title = "column width=5", width = 5, solidHeader = TRUE, status = "primary",
+          "box width =3"
+        ),
+        box(
+          title = "column width=5",
+          width = 5, background = "black",
+          "box width =3"
+        )
+      ),
+      column(
+        width = 7,
+        box(
+          title = "column width=4", solidHeader = TRUE, status = "primary", width=NULL,
+          HTML("box width = NULL<br>meaning box width=12 (with no padding<br>but not setting box width means<br> width=0"
+        )),
+        box(
+          title = "column width=4",
+          width = 12, background = "black",
+          HTML("box width =12<br>
+            has padding")
+        )
+      )
+    )
+  )
+}
+```
+
+```{r}
+dashboard1()
+```
+
+
+```{r}
+column(
+fluidRow(
+  box(width=12)
+),
+fluidRow(
+  
+)
+)
+```
+
+

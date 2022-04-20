@@ -1,0 +1,121 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+library(plotly)
+fig <- plot_ly(midwest, x = ~percollege, color = ~state, type = "box")
+fig
+View(fig)
+```
+
+```{r}
+library(leaflet)
+
+m <- leaflet() %>%
+  addTiles() %>%  # Add default OpenStreetMap map tiles
+  addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
+
+m
+View(m)
+```
+
+```{r}
+library(DT)
+dt <- DT::datatable(iris)
+dt
+View(dt)
+```
+
+
+```{r}
+htmlwidgets::saveWidget()
+htmltools::save_html(
+  fig, file="temp/fig.html"
+)
+```
+
+## Shiny
+
+```{r}
+library(shiny)
+
+```
+
+```{r}
+fluidPage(
+  headerPanel(
+    "Shiny dashboard"
+  ),
+  sidebarLayout(
+    # Sidebar with a slider input
+    sidebarPanel(
+      sliderInput("obs",
+                  "Number of observations:",
+                  min = 0,
+                  max = 1000,
+                  value = 500)
+    ),
+
+    # Show a plot of the generated distribution
+    mainPanel(
+      plotly::plot_ly(midwest, x = ~percollege, color = ~state, type = "box")
+    )
+  )
+) -> ui 
+
+ui |> showTag()
+```
+
+
+## plotly
+
+
+```{r}
+tx5 <- jsonlite::fromJSON("https://www.dropbox.com/s/9yxq2g1a5vdywu6/tx5.json?dl=1") |>
+  econIDV::as.Data() # this is only for this course to mark the object a data class
+```
+
+
+```{r}
+library(plotly)
+plot_ly(tx5, x = ~date, y = ~median) %>%
+  add_lines(linetype = ~city) -> plt
+plt
+```
+
+
+```{r}
+ggplot(tx5, aes(x=date, y=median)) +
+  geom_line(aes(linetype=city)) -> gg
+gg
+```
+
+```{r}
+names(tx5)
+```
+
+```{r}
+myformula = ~  volume*median
+model.frame(myformula, tx5) -> mat0
+View(mat0)
+```
+
+```{r}
+plt <- function()
+{plot_ly(tx5, x = ~date, y = ~median) %>%
+    add_lines(linetype = ~city) -> plt
+  plt}
+```
+
+```{r}
+plt()
+```
+
+
+
+
+

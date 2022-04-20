@@ -1,0 +1,232 @@
+
+```{r}
+pt=econIDV::PlotlyTools()
+```
+
+```{r}
+?highlight
+```
+
+```{r}
+highlight |> econIDV::get_inputNamesDefaults() |> View()
+```
+
+## 3.2
+
+```{r}
+visit <- econIDV::Visit()
+visit$leafletR()
+```
+
+```{r}
+library(leaflet)
+
+m <- function() {
+  m <- 
+    leaflet() %>%
+    setView(lat=24.944551, lng=121.369482, zoom=12) %>%
+    addTiles() %>%  # Add default OpenStreetMap map tiles (圖磚)
+    addMarkers(lat=24.944551, lng=121.369482, popup="社會科學院")
+  m
+}
+m() |> econIDV::showWidget()
+```
+
+```{r}
+m2 <- function() {
+  m <- 
+    leaflet() %>%
+    setView(lat=24.944551, lng=121.369482, zoom=16) %>%
+    addProviderTiles(providers$CartoDB.Positron)
+  m
+}
+m2()
+```
+
+```{r}
+mp <- econDV2::Map()
+mp$browse$openstreetmap()
+# mp$browse$openstreetmap()
+# mp$extract$osmBBox()
+bbox = c(left = 121.36368, bottom = 24.93928, right = 121.37436, top = 24.94824)
+mp$osm$request_data(
+  bbox,
+  features = 
+    c("building"="university")
+) -> osm_data
+osm_data$osm_polygons -> sf_data
+saveRDS(sf_data, "data/sf_data.Rds")
+```
+
+```{r}
+m3 <- function(sf_data, ...) {
+  m2() |>
+    addPolygons(
+      data=sf_data, ...
+    )
+}
+m3(sf_data)
+```
+
+```{r}
+addPolygons |> 
+  econIDV::get_inputNamesDefaults() |> View()
+```
+
+```{r}
+m3(sf_data, stroke=FALSE)
+m2() |>
+    addPolygons(
+      data=sf_data, stroke=FALSE
+    )
+```
+
+```{r}
+x=1
+y="Hi"
+
+dir.create("data")
+saveRDS(x, file="data/x.Rds")
+x = readRDS("data/x.Rds")
+save(x, y, file="data/xy.Rda")
+load("data/xy.Rda")
+```
+
+```{r}
+xfun::read_utf8("week3.Rmd") -> lines
+lines
+xfun::write_utf8(lines, "week3_new.Rmd")
+```
+
+```{r}
+view <- econIDV::View()
+popupOptions |> view$inputs()
+```
+
+```{r}
+content <- paste(sep = "<br/>",
+  "<b><a href='http://www.samurainoodle.com'>Samurai Noodle</a></b>",
+  "606 5th Ave. S",
+  "Seattle, WA 98138"
+)
+
+leaflet() %>% addTiles() %>%
+  addPopups(-122.327298, 47.597131, content, options = popupOptions(
+    closeButton=FALSE
+  )
+  )
+```
+
+```{r}
+sf_dataTarget <- function() {
+  whichIsTarget <- which(
+    stringr::str_detect(
+      sf_data$name, "社會科學"
+    )
+  )
+  sf_dataTarget = sf_data[whichIsTarget, ]
+  sf_dataTarget
+} 
+```
+
+```{r}
+m4 <- function() {
+  m2() |>
+    leaflet::addPolygons(
+      data=sf_data,
+      color="white",
+      weight=1,
+      fillColor = "#a5d6fe"
+    ) |>
+    leaflet::addPolygons(
+      data=sf_dataTarget(),
+      color=FALSE,
+      fillOpacity= 1, 
+      fill = "#036dc4"
+    )
+}
+m4()
+```
+
+## 3.3
+
+```{r}
+library(DT)
+```
+
+```{r}
+iris
+DT::datatable(iris, extensions = 'KeyTable', 
+  options = list(keys = TRUE),
+  callback=JS('
+    table.on("key-focus.dt",
+    function(){alert("hi") })
+    '))
+```
+
+```{r}
+tx5 <- jsonlite::fromJSON("https://www.dropbox.com/s/9yxq2g1a5vdywu6/tx5.json?dl=1") |>
+  econIDV::as.Data() # this is only for this course to mark the object a data class
+```
+
+```{r}
+library(plotly)
+plot_ly(tx5, x = ~date, y = ~median) %>%
+  add_trace(
+    type="scatter", mode="lines",
+    linetype=~city
+  )
+  
+add_lines()  
+```
+
+```{r}
+jsonlite::fromJSON("")
+```
+
+
+## Heritage
+
+```{r}
+mp$browse$openstreetmap()
+```
+
+```{r}
+heritageData |>
+  dplyr::select(
+    longitude, latitude, caseName
+  ) |>
+  na.omit() -> df0
+leaflet(data=df0) |>
+  # setView(
+  #   lat=23.639, lng=120.604, zoom=6
+  # ) |>
+  addTiles() -> lf0
+```
+
+```{r}
+jsonlite::fromJSON("https://www.dropbox.com/s/qk00iempcacqapv/heritage.json?dl=1") -> heritageData
+heritageData |>
+  dplyr::select(
+    longitude, latitude, caseName
+  ) |>
+  na.omit() -> df0
+```
+
+```{r}
+leaflet(data=df0) |>
+  # setView(
+  #   lat=23.639, lng=120.604, zoom=6
+  # ) |>
+  addTiles() |> 
+  addMarkers(
+    lng= ~longitude,
+    lat= ~latitude,
+    popup = ~htmlEscape(caseName)
+  )
+```
+
+
+
+
+
