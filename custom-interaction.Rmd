@@ -59,6 +59,71 @@ plt
 
   * <https://plotly.com/javascript/plotlyjs-function-reference/#plotlyrelayout>
 
+```{r}
+plt |> 
+  plotly::layout(
+    title=list(text="New Title"),
+    plot_bgcolor="aliceblue"
+  )
+
+plt |> 
+    plotly::layout(
+    title=list(text=NA),
+    plot_bgcolor="white"
+  )
+
+```
+
+```{r}
+button = list(
+  label="relayout",
+  method="relayout",
+  args=list(
+    list(title=list(text="New Title"),
+    plot_bgcolor="aliceblue")
+  ),
+  args2=list(
+    list(
+      title=list(text=NA),
+    plot_bgcolor="white"
+    )
+  )
+)
+```
+
+```{r}
+pt=PlotlyTools()
+pt$query_layout$`Update Menus`()
+pt$`query_Update Menus`()
+```
+
+```{r}
+
+```
+
+
+```{r}
+plt |> 
+  plotly::layout(
+    updatemenus=list(
+     #updatemenu
+      list(
+        type="buttons",
+        buttons=list(
+          button
+        )
+      ) 
+      
+     #updatemenu
+      
+      
+    )
+    
+  )
+```
+
+
+
 ```{r button}
 button <- function() {
   list(
@@ -100,7 +165,7 @@ plt |>
     updatemenus=list(
       updatemenu
     )
-  )
+  ) -> plt2
 ```
 
 
@@ -115,6 +180,41 @@ plt |>
 pt$query_trace$Scatter()
 pt$query_Scatter()
 pt$query_Scatter("line-")
+```
+
+```{r}
+plt |> 
+  plotly::style(
+    line=list(dash="dash"),
+    traces=1
+  )
+```
+ update [, traceIndices]
+```{r}
+buttonStyle = list(
+  label="restyle",
+  method="restyle", 
+  args=list(
+    list(line=list(dash="dash")),
+    list(1)
+  )
+)
+```
+
+```{r}
+plt |> 
+  plotly::layout(
+    updatemenus=list(
+      list(
+        type="buttons",
+        buttons=list(
+          button, 
+          buttonStyle
+        )
+        
+      )
+    )
+  )
 ```
 
 
@@ -223,7 +323,7 @@ plt |>
       updatemenu(),
       updatemenu2()
     )
-  ) #|> plotly::api_create()
+  ) 
 ```
 
 ## Elections
