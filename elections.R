@@ -4,7 +4,8 @@ plot_ly(data=sf_electionsByYears$`2012`) |>
     name=~地區,
     color=~`勝黨得票率區間2`,
     colors=twoPartyPals,
-    alpha=1
+    alpha=1,
+    line=list(color="white", width=0.4)
   ) -> plt
 plt
 buttonLegend = function(){
