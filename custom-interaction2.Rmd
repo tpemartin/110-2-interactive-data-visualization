@@ -1,0 +1,1373 @@
+# Custom interaction
+
+## Update menu
+
+Interaction: Users interact with **some UI** to select **the instance** they want. The graph then updates accordingly. 
+
+To design such interaction, we need to:
+
+  * design UI such as buttons, dropdown menu, etc. 
+  
+  * attach instance to such UI
+  
+### Example data
+
+```{r}
+create_data = function(){
+  data.frame(
+    x=1:5,
+    y=sample(1:10, 5, T)
+  )
+}
+set.seed(2938)
+df1 = create_data()
+df2 = create_data()
+
+plot_trace = function(){
+  require(plotly)
+  plot_ly() |>
+    add_lines(
+      data=df1,
+      x=~x, y=~y
+    ) |>
+    add_lines(
+      data=df2,
+      x=~x, y=~y
+    )
+}
+plot_trace() -> plt
+plt
+```
+
+
+### Button UI
+
+  * label
+  
+  * method: how to create the instance. "relayout", "restyle", "update", and "animate"
+  
+    * Each refers to `Plotly.relayout`, `Plotly.restyle`, `Plotly.update` and `Plotly.animate` in plotly.js. (<https://plotly.com/javascript/plotlyjs-function-reference/>)
+  
+  * args: a list of setup information to be supplied for the the instance
+  
+    * args value is formulated as `list(...)` which is passed to `Plotly.method(...)`. So `method="update"` and `args=list(A, B)` mean `Plotly.update(A,B)` is called. 
+  
+  * args2: a list of setup for old layout, which gives the button the toggle effect.
+
+### Relayout
+
+
+  * <https://plotly.com/javascript/plotlyjs-function-reference/#plotlyrelayout>
+
+```{r button}
+button <- function() {
+  list(
+    label = "Relayout",
+    method = "relayout",
+    args = list(
+      list(
+        title = "Layout Update",
+        plot_bgcolor = "aliceblue"
+      )
+    ),
+    args2 = list(
+      list(
+        title = "Example",
+        plot_bgcolor = "white"
+      )
+    )
+  )
+}
+```
+
+### Create widget
+
+An update menu is a collection of buttons:
+
+```{r}
+updatemenu = list(
+  type="buttons",
+  buttons= list(
+    button(),
+  )
+)
+```
+
+To show in your widget, you do:
+```{r}
+plt |>
+  plotly::layout(
+    updatemenus=list(
+      updatemenu
+    )
+  )
+```
+
+
+### Restyle
+
+  * <https://plotly.com/javascript/plotlyjs-function-reference/#plotlyrestyle>
+  
+  * <https://plotly.com/r/custom-buttons/> 
+
+
+```{r}
+pt$query_trace$Scatter()
+pt$query_Scatter()
+pt$query_Scatter("line-")
+```
+
+
+```{r button2}
+button2 <- function() {
+  list(
+    label = "Restyle",
+    method = "restyle",
+    args = list(
+      list(line.dash = "dash"),
+      list(0, 1) # applied to traces. Counting start from 0
+    ),
+    args2 = list(
+      list(line = list(dash = "solid")),
+      list(0, 1)
+    )
+  )
+}
+```
+
+
+```{r button3}
+button3 <- function(){
+  list(
+    label="Restyle trace 0",
+    method="restyle",
+    args=list(
+        list(line=list(dash="dash")),
+      list(0)
+    ),
+    args2=list(
+      list(line=list(dash="solid")),
+      list(0)
+    )
+  )
+}
+```
+
+### Update
+
+```{r button4}
+button4 <- function() {
+  list(
+    label = "Update",
+    method = "update",
+    args = list(
+      # arg for restyle
+      list(
+        mode = "lines+markers"
+      ),
+      # arg for relayout
+      list(
+        plot_bgcolor = "#e8f5e9"
+      ),
+      # arg for restyle indices
+      list(1)
+    ),
+    args2 = list(
+      # arg for restyle
+      list(
+        mode = "lines"
+      ),
+      # arg for relayout
+      list(
+        plot_bgcolor = "white"
+      ),
+      # arg for restyle indices
+      list(1)
+    )
+  )
+}
+```
+
+
+```{r updatemenu}
+updatemenu <- function() {
+  list(
+    type = "buttons",
+    x = -0.04,
+    y = 0.8,
+    buttons = list(
+      button(),
+      button2(),
+      button3(),
+      button4()
+    )
+  )
+}
+updatemenu2 = function() {
+  list(
+    x = -0.04,
+    buttons = list(
+      button(),
+      button2(),
+      button3(),
+      button4()
+    )
+  )
+}
+```
+
+```{r}
+plt |>
+  plotly::layout(
+    updatemenus=list(
+      updatemenu(),
+      updatemenu2()
+    )
+  ) #|> plotly::api_create()
+```
+
+## Elections
+
+### Data preparation
+
+```{r data-1}
+examples=econIDV::Examples()
+examples$election()
+examples$election_env$attach()
+download_electionData()
+# prepare choropleth map data
+elections |>
+  prepare_choroplethMapData() |>
+  # 增加 df_elections$得票率顏色說明
+  add_intervalLabels() |>
+  dplyr::mutate(
+    勝黨得票率區間=得票率顏色說明:factor(勝出政黨)
+  ) |>
+  # 增加 勝黨得票率區間2
+  add_adjustedWinningPartyVoteShare() |>
+  # 增加 trace_name
+  add_trace_name() -> df_elections
+
+df_elections |>
+  as.data.frame() |> # to remove tibble class for row.names assignment
+  create_sf() |>
+  # 移除geometry空的資料, 否則ggplotly會有錯誤
+  econIDV::remove_emptyGeometry() ->
+  sf_elections
+
+twoPartyPals <- get_twoPartyPals()
+
+scales::label_percent(accuracy=0.01, scale=1) -> label_share
+
+sf_electionsByYears <- 
+  sf_elections |> split(sf_elections$年)
+```
+
+### Base plot
+
+```{r}
+plot_ly(data=sf_electionsByYears$`2012`, height=700, width = 500) |>
+  add_sf(
+    name=~地區,
+    color=~`勝黨得票率區間2`,
+    colors=twoPartyPals,
+    alpha=1,
+    line=list(color="white", width=0.4)
+  ) |>
+  plotly::layout(
+    showlegend=F)-> plt
+plt
+```
+
+
+
+### UI
+
+  * 年份選單
+  
+  * 縣市選鈕
+
+#### 了解trace
+
+找trace names
+```{r}
+plt |> plotly_build() -> p
+purrr::map_chr(1:19, ~p$x$data[[.x]]$name)->
+  tracenames
+tracenames
+```
+
+取出三年各縣市色碼
+```{r}
+purrr::map(1:3,
+  ~{
+    fillcolorx=sf_electionsByYears[[.x]]$得票率顏色
+    names(fillcolorx) <- sf_electionsByYears[[.x]]$地區
+    fillcolorx
+  }) -> list_fillcolors
+names(list_fillcolors) <- c(2012, 2016, 2020)
+list_fillcolors$`2012`[tracenames]
+
+```
+
+
+#### 定義buttons 
+
+```{r buildwidget}
+button2012=list(
+  label="2012",
+  method="restyle",
+  args=list(
+    list(fillcolor=list_fillcolors$`2012`[tracenames])
+  )
+)
+button2016=list(
+  label="2016",
+  method="restyle",
+  args=list(
+    list(fillcolor=list_fillcolors$`2016`[tracenames])
+  )
+)
+button2020=list(
+  label="2020",
+  method="restyle",
+  args=list(
+    list(fillcolor=list_fillcolors$`2020`[tracenames])
+  )
+)
+```
+
+```{r}
+require(htmltools)
+require(shinydashboard)
+require(shiny)
+```
+
+#### 設計Input
+
+```{r dropdownMenuTag}
+dropdownMenuTag=function(){
+  require(htmltools)
+  tagList(
+tags$div(class = "btn-group", id="dropdown",
+ tags$button(type = "button",
+   class = "btn btn-outline-dark text-secondary dropdown-toggle",
+   `data-toggle` = "dropdown",
+   `aria-haspopup` = "true",
+   `aria-expanded` = "false",
+   "2012"),
+ tags$div(class = "dropdown-menu",
+   tags$a(class = "dropdown-item",
+     href = "#",
+     "2012"),
+   tags$a(class = "dropdown-item",
+     href = "#",
+     "2016"),
+   tags$a(class = "dropdown-item",
+     href = "#",
+     "2020")))) -> tag_element
+
+tag_element 
+}
+```
+
+#### Dashboard
+
+```{r}
+simple_bs4_theme <- 
+  bslib::bs_theme(version = 4)
+
+page = function(p){
+ require(htmltools)
+  page=
+  shiny::fluidPage(
+    theme=simple_bs4_theme,
+  dashboardHeader(),
+  dashboardSidebar(),
+  dashboardBody(
+    bscols(
+      widths = 6,
+      div(
+  style="position:relative",
+        p,
+  div(
+    style="position:absolute;top:48px;left:91px",
+    dropdownMenuTag()
+  )
+) 
+    )
+  )
+)
+  page
+}
+
+pltWithUpdateMenus = function(plt){
+  plt |> plotly::layout(
+    updatemenus=list(
+      list(
+        type="buttons",
+        buttons=list(
+          button2012,
+          button2016, 
+          button2020
+        )
+      )
+    )
+  ) 
+}
+```
+
+## App test
+
+### Preliminary App View
+
+```{r}
+myapp = readRDS("data/myapp.Rds")
+# myapp$load$button2012()#$page()#$pltWithUpdateMenus()#$plt()
+myapp$load |> purrr::walk(~{eval(.x(), envir = .GlobalEnv)})
+```
+
+```{r}
+plt |> 
+  pltWithUpdateMenus() |>
+  page() -> webapp
+
+webapp |> apptest::App(
+  name="election",
+  js="script.js",
+  css="style.css") -> app
+debug(app$create)
+app$create()
+app$setup()
+app$view()
+```
+
+  * `script.js` and `style.css` are for you to collect scripts and styles that you want to keep after you app lab experiment.
+
+### Fix UI
+
+```{css}
+.updatemenu-container {
+  display:none;}
+```
+
+
+```{r}
+app$update()
+```
+
+```{r}
+app$update(js="script.js")
+```
+
+### Inject JS
+
+```{js jscode, eval=F}
+$dropdown=$("#dropdown");
+$dropdownButton=$("#dropdown > button");
+$dropdownItems=$("#dropdown > div > .dropdown-item");
+buttonMap = {
+"2012": 0,
+"2016": 1, 
+"2020": 2
+}
+$buttons=$(".updatemenu-button");
+
+$dropdownItems.click(function(){
+    year = $(this).text() 
+    $buttons[buttonMap[year]].dispatchEvent(new Event("click"));
+    $dropdownButton.text(year);
+    
+})
+console.log(buttonMap);
+
+```
+
+```{r}
+app$update()
+```
+
+## Final product
+
+  * Check `app$meta$dependencyScript` for dependency description.
+
+```{r}
+# You app before app test
+webApp <- function(){
+  plt |> 
+  pltWithUpdateMenus() |>
+  page() 
+}
+# Final project
+appDep <- function(){
+    htmltools::htmlDependency(name = "election", version = "1.0", 
+        src = c(file = "/Users/martinl/Github/interactive-data-visualization/bookdown/inst/election"), 
+        script = "js/script.js", stylesheet = "css/style.css")
+}
+finalApp <- function(){
+  htmltools::attachDependencies(
+    webApp(),
+    appDep()
+  )
+}
+```
+
+```{r}
+finalApp() |> econIDV::showWidget()
+```
+
+
+## Elections 2
+
+### bs4Dash
+
+  * bs4Dash: <https://rinterface.github.io/bs4Dash/index.html>
+
+```{r}
+library(bs4Dash)
+```
+
+### Data preparation
+
+```{r}
+source("~/Github/interactive-data-visualization/bookdown/example/election2-support.R", echo=TRUE)
+
+```
+
+
+```{r}
+share_electionsByYears <- vector("list",3)
+for(.x in 1:3){
+    crosstalk::SharedData$new(sf_electionsByYears[[.x]],key=~地區, group="地區") -> share_electionsByYears[[.x]]
+}
+names(share_electionsByYears)  <- c(2012,2016,2020)
+```
+
+### Base plot
+
+```{r}
+plot_ly(data=share_electionsByYears$`2012`, height=700) |>
+  add_sf(
+    name=~地區,
+    color=~`勝黨得票率區間2`,
+    colors=twoPartyPals,
+    alpha=1,
+    line=list(color="white", width=0.4)
+  ) |>
+  plotly::layout(
+    showlegend=F,
+    paper_bgcolor="transparent"
+  ) |>
+  highlight(
+    off="plotly_doubleclick"
+    )-> plt2
+plt2
+```
+
+
+```{r}
+plt2 |> plotly_build() -> p
+View(p)
+```
+
+### Design Input
+
+```{r}
+Input = function(){
+  input = list()
+  input$inputCounty = inputCounty()
+  input$updatemenu = updatemenu()
+  input$dropdown = dropdown()
+  input
+}
+inputCounty <- function(){
+crosstalk::filter_select(
+  id="inputCounty",
+  label="地區",
+  sharedData = share_electionsByYears$`2012`,
+  group=~地區
+)
+}
+updatemenu <- function(){
+  list(
+  type="buttons",
+  buttons=list(button2012, button2016, button2020)
+)
+}
+dropdown  <- function(){
+    require(htmltools)
+    tagList(
+      tags$style(".updatemenu-container{display:none;"),
+  tags$div(class = "btn-group", id="dropdown",
+   tags$button(type = "button",
+     class = "btn btn-outline-dark text-secondary dropdown-toggle",
+     `data-toggle` = "dropdown",
+     `aria-haspopup` = "true",
+     `aria-expanded` = "false",
+     "2012"),
+   tags$div(class = "dropdown-menu",
+     tags$a(class = "dropdown-item",
+       href = "#",
+       "2012"),
+     tags$a(class = "dropdown-item",
+       href = "#",
+       "2016"),
+     tags$a(class = "dropdown-item",
+       href = "#",
+       "2020")))) -> tag_element
+
+tag_element 
+}
+```
+
+### UI Dashboard
+
+
+```{r}
+input=Input()
+plt2 |> plotBox() |> ui() |> apptest::App() -> app
+app$create()
+app$setup()
+app$view()
+```
+
+
+```{r}
+plt2 |> plotly::layout(
+  updatemenus=list(
+    input$updatemenu
+  )
+) -> plt3
+plt3
+```
+
+```{r}
+plt3 |> plotBox() |> ui() |>
+  app$update()
+```
+
+### Test js
+
+#### Try to catch some elements
+```{r}
+app$update(js="app5.js")
+```
+
+```{js jscode}
+$dropdown=$("#dropdown");
+$dropdownButton=$("#dropdown > button");
+$dropdownItems=$("#dropdown > div.dropdown-menu > .dropdown-item");
+console.log($dropdown,$dropdownButton,$dropdownItems)
+```
+
+
+```{r}
+app$update()
+```
+
+#### Try to hide some elements
+
+```{css}
+.updatemenu-container {
+display:none;
+}
+```
+
+```{r}
+app$update(css="mystyle.css")
+```
+
+```{r}
+app$update()
+```
+
+#### Make dropdown menu better
+
+Try to catch the year number in each user click:
+```{js}
+handleDropdownClick=function(e,t){
+ console.log($(this).text())
+}
+$($dropdownItems[0]).click(handleDropdownClick)
+$dropdownItems.each(function(){
+  $(this).click(handleDropdownClick)
+})
+```
+
+Extend handler to invisibily click corresponding button:
+```{js jscode}
+buttonMap = {
+"2012": 0,
+"2016": 1, 
+"2020": 2
+}
+$buttons=$(".updatemenu-button");
+handleDropdownClick=function(e,t){
+ year=$(this).text();
+ console.log($buttons[buttonMap[year]])
+}
+$dropdownItems.each(function(){
+  $(this).click(handleDropdownClick)
+})
+```
+
+All Together:
+```{js}
+buttonMap = {
+"2012": 0,
+"2016": 1, 
+"2020": 2
+}
+$buttons=$(".updatemenu-button");
+handleDropdownClick=function(e,t){
+ year=$(this).text();
+ $buttons[buttonMap[year]].dispatchEvent(new Event("click"));
+ console.log($buttons[buttonMap[year]])
+}
+$dropdownItems.each(function(){
+  $(this).click(handleDropdownClick)
+})
+```
+
+```{r}
+app$update()
+```
+
+####Final Product
+
+```{r}
+app$meta$dependencyScript
+
+product_dep = function(){
+    htmltools::htmlDependency(name = "app", version = "1.0", 
+        src = c(file = "/Users/martinl/Github/interactive-data-visualization/bookdown/inst/app"), 
+        script = "js/app5.js", stylesheet = "css/mystyle.css")
+}
+plt3 |> plotBox() |> ui() |>
+  attachDependencies(
+    list(product_dep())
+  ) -> finalProduct
+```
+
+```{r}
+finalProduct |> econIDV::showWidget()
+```
+
+
+## TBC
+
+### App test
+
+
+```{r}
+dashboard(plt2, input=Input(), boxwidth = NULL, containerClass = "container-fluid") |>
+  apptest::App(name="election2", js="election2.js", css="election2.css") -> app2
+
+app2$create()
+app2$setup(app_port=3333)
+app2$view()
+```
+
+### App test
+
+```{css}
+.navbar {
+height:50px;
+}
+
+```
+
+
+### Materialise css framework
+
+  * <https://materializecss.com/>
+
+```{r}
+materialiseDash::
+```
+
+
+```{r}
+page$sidenav = 
+    sidenav(
+      div(
+        class="row",
+        list_plts[[1]]), 
+      div(
+        class="row",
+        list_plts[[2]])) 
+
+page$sidenav |> econIDV::showWidget()
+```
+
+```{r}
+library(materialiseDash)
+library(htmltools)
+tagList(
+nav(
+  materialiseDash::sidenav("a","b")
+),
+tags$main(
+  div(class="row",
+  div(class="col s12 m6 offset-m2",
+    list_plts[[3]]
+  )))
+  )|> econIDV::showWidget()
+
+```
+
+
+### Save
+
+```{r, eval=F}
+econIDV::Object(customInteraction)
+customInteraction$addm(
+  sf_electionsByYears,
+  label_share, twoPartyPals,
+  highlight_electionsByYears,
+  list_splitByCounties, plt_raw,
+  plt1, plt2
+)
+customInteraction$save()
+```
+
+```{r}
+customInteraction = readRDS("data/customInteraction.Rds")
+customInteraction$load$sf_electionsByYears()
+```
+-->
+
+## App test
+
+We are going to enhance then interaction of our app and test it in the Chromedriver environment via **apptest** package.
+
+### Installation
+
+First, install chromedriver from
+
+  * <https://chromedriver.chromium.org/home>
+
+in one of R's searching Path, which can be found at:
+```{r, eval=F}
+Sys.getenv("PATH")
+```
+
+shows all the path in which R searches for files. Put chromedriver in any path there.
+
+***
+Testing your chromedriver:
+
+  * In your **Terminal** window, type `chromedriver`. You should see:  
+```
+Starting ChromeDriver 99.0.4844.51 (d537ec02474b5afe23684e7963d538896c63ac77-refs/branch-heads/4844@{#875}) on port 9515
+Only local connections are allowed.
+Please see https://chromedriver.chromium.org/security-considerations for suggestions on keeping ChromeDriver safe.
+ChromeDriver was started successfully.
+```
+
+***
+
+Then install **apptest** package:
+```{r, eval=F}
+remotes::install_github("tpemartin/apptest", force=TRUE)
+```
+
+
+### Test
+
+```{r echo=FALSE}
+customInteraction = readRDS("data/customInteraction.Rds")
+customInteraction$load$plt2()
+```
+
+<div class="alert alert-info">
+
+To test your app, we first create its app instance from `apptest::App()`:
+```{r}
+app <- apptest::App(plt2)
+```
+
+The instance comes with:
+
+```{r}
+# htmlfile the file path of the app page html you want to create, default= "temp/index.html"
+app$create(htmlfile) # create app page html
+app$setup(app_port) # prepare testing environment (server and chromedriver). app_port is default at 4321
+app$view() # view app from testing environment
+
+app$update(widget) # when source widget (ie. plt2 here) changes, you only need to app$update(plt2) 
+
+app$restart() # when app server was interrupt, this restarts it.
+```
+
+</div>
+
+<div class="alert alert-warning">
+Note that when your do `app$setup()`. `session` object will be created in the global environment, which is a controlling object for chromedriver. If you removed it, then you need to run `app$setup()` again to build a new one.
+</div>
+
+For the first time:
+```{r}
+# create app files
+app$create("temp2/election.html")
+# start app server and chrome driver for testing purpose
+app$setup()
+```
+
+
+```{r}
+# view app in chrome
+app$view()
+```
+
+  * `app$create("temp/election.html")` creates an app page as `temp/election.html` for testing.
+  
+  * `app$setup()` build an app testing environment, which will create a `session` object in the global environment for chrome controlling purpose. 
+  
+  * Often `app$create()` takes time. When app page is not ready, the popup chrome sees nothing. You can wait till app page created and run `app$view()`
+
+***
+
+After that, whenever you modify your widget (i.e. `plt2` here), you only need to do:
+```{r}
+plt2 |> app$update()
+```
+
+  
+### App port
+
+By default the app will be served through port 4321. If you receive the following error message in **Jobs** window:  
+```
+createTcpServer: address already in use
+```
+
+It means the port 4321 is in use. Choose another port like:
+```{r}
+app$setup(app_port=3829)
+```
+
+### Restart
+
+If you stop the app server job, then
+```{r}
+app$view()
+```
+will be black since nothing is served for users to view now.
+
+To restart it,
+```{r}
+app$restart()
+```
+
+```{r}
+app$view()
+```
+
+
+### Launch Inspector
+
+  * You can press **ESC** in chrome driver to toggle **Console drawer**.
+  
+  * Ctrl+L in Windows (Cmd+L in Mac) to clear js console.
+  
+## Globe app
+
+```{r}
+download.file("https://github.com/ntpuecon/ntpuecon110graduate/blob/master/data/capitals.rda?raw=true", destfile="capitals.rda")
+load("capitals.rda")
+```
+
+
+```{r}
+plot_capitalTrees = function(){
+  library(plotly)
+
+  lat= 24.9442979
+  lon=121.370319
+  roll=0
+
+  whichIsTaipei = which(capitals$CapitalName=="Taipei")
+  rbind(capitals[whichIsTaipei,], capitals[-whichIsTaipei,]) -> capitals
+  capitals$CountryName = factor(
+    capitals$CountryName, levels=capitals$CountryName
+  )
+
+  require(plotly)
+  g <- list(
+    projection = list(
+      type ='orthographic',#   'natural earth',
+      rotation = list(
+        lon=lon,
+        lat=lat,
+        roll=roll
+      )
+    ),
+    showland = TRUE,
+    showocean= TRUE,
+    oceancolor="#e3f2fd",
+    bgcolor= "#00000000",
+    landcolor = "#fff8e1"
+  )
+  #plotly::plot_geo() |> plotly::layout(geo=g)
+  fig <- plot_geo(capitals, lat = ~CapitalLatitude, lon = ~CapitalLongitude, width="263", height="263")
+  fig <- fig |>
+    add_text(
+      text=~tree,
+      name=~CountryName
+    ) %>%
+    plotly::layout(
+      showlegend=F,
+      plot_bgcolor="#00000000",
+      paper_bgcolor="#00000000",
+      geo=g,
+      margin=list(l=0, r=0, t=0, b=0)
+    ) |>
+    plotly::config(
+      displayModeBar=F
+    ) |>
+    htmlwidgets::onRender("function(e){widget=e;}")
+  fig
+}
+```
+
+```{r}
+econWeb::Dependency() -> dep
+plot_capitalTrees() |> 
+  htmltools::attachDependencies(
+    list(
+      dep$jquery$onCloud()
+    )
+  ) |> econIDV::showWidget()
+```
+
+***
+
+### App Test
+
+  * **Addins** > **Start app test**
+
+```{r}
+plot_capitalTrees() |> 
+  htmltools::attachDependencies(
+    list(
+      dep$jquery$onCloud()
+    )
+  ) |> app$update()
+```
+
+### js test
+
+```{js}
+targetTree = function(lat, lon){
+  Plotly.relayout(widget,
+    {geo: {
+        center: {
+        lat: lat,
+        lon: lon},
+        projection: {
+        type: "orthographic",
+        rotation: {
+        lat: lat,
+        lon: lon,
+        roll: 0
+      }}}
+      }
+  )
+}
+clearTrees = function(){
+  var clearTree = {
+    visible: false
+  };
+
+  let nonTaiwanTraces = Array.from({length: 244}, (_, i) => i + 1)
+  Plotly.restyle(widget, clearTree, nonTaiwanTraces);
+  treesPlanted =1;
+}
+
+
+treesPlanted = 1;
+plantOneMoreTree = function(){
+  var plantTree = {
+     visible: true
+  }
+  Plotly.restyle(widget, plantTree, treesPlanted)
+  treesPlanted = treesPlanted+1
+}
+```
+
+
+## Create DOM object
+
+To customize interaction, we need to create js objects to represent those element in your app UI that you want to interact with. For those js objects that represent an html element, they are called **DOM objects**.
+
+### CSS selector
+
+  * css selector syntax: <>
+
+We will use jQuery package to facilitate element selection.
+
+First you need to attach jQuery dependency to your app:
+```{r}
+deps = econWeb::Dependency()
+htmltools::attachDependencies(
+  plt2, deps$jquery$onCloud()
+) -> plt2
+
+plt2 |> app$update()
+```
+
+<div class="alert alert-info">
+Actually Plotly widget already self-attached jQuery dependency. So if you have plotly widget in your app, you can ignore attaching jQuery.
+</div>
+
+You can create a js DOM object
+```{js}
+objectName = $("css selector");
+```
+
+  * It is common to use `$` as its object name starting symbol such as `$img = $("img")` -- the object name is `$img`. This tells you `$img` is a DOM object created by jQuery.
+  
+Assign `id` to a tag is the best way to select the tag DOM object through `#id` css selector. If you want to select some element inside that container you can extend it to `#id > selector for the next layer`.
+
+```{r}
+style = HTML("
+.example {
+  width: 400px;
+  height:400px;
+}
+.example > div {
+  min-height: 200px;
+  border-style: dashed;
+}
+")
+
+tags$div(
+  class="example",
+  tags$div(
+    id="container1", "container 1"
+  ),
+  tags$div(
+    id="container2", plt2
+  )
+) |>
+  tagList(
+    tags$style(style)
+  ) |> app$update()
+app$view()
+```
+
+```{js}
+$container1=$("#container1");
+$container2=$("#container2");
+$widget=$("#container2 > div");
+console.log($container1, $container2, $widget);
+```
+
+
+### Document ready
+
+For maintainence purpose, we put js and css in external files:
+```{r}
+dir.create("examples")
+file.edit("examples/custom-interaction.js")
+file.edit("examples/custom-interaction.css")
+```
+
+and create a dependency:
+```{r}
+myDependency <-
+  htmltools::htmlDependency(
+    name="custom-interaction",
+    version="1.0.0",
+    src=c(file=normalizePath("examples/")),
+    stylesheet="custom-interaction.css",
+    script = "custom-interaction.js"
+  )
+```
+
+If you are happy with your experiment on css and js, put them in .css and .js files, then
+```{r}
+myApp <- function(){
+  tags$div(
+  class="example",
+  tags$div(
+    id="container1", "container 1"
+  ),
+  tags$div(
+    id="container2", plt2
+  )) -> widgetTag
+  attachDependencies(widgetTag, myDependency)
+}
+
+myApp() |> 
+  app$update()
+
+app$view()
+```
+
+Since it takes time for browser to render all the page elements, any DOM object creation must happen after all the elements are rendered. To ensure that, you should put any js code related with DOM object inside the following function body:
+
+```{js}
+$(function(){
+  
+  // all codes here will not be executed until the document is ready.
+  
+})
+```
+
+
+### onRender approach
+
+
+DOM object regarding htmlwidget can be render on the run as:
+```{r}
+plt2 |> 
+  htmlwidgets::onRender(
+    "function(e){ widget=e; }"
+  ) -> plt2
+
+myApp() |> 
+  app$update()
+
+app$view()
+```
+
+  * `onRender` takes a js function as its handler when widget is rendered. The function take the rendered DOM object as its input.
+
+Test DOM object `widget`:
+```{js}
+console.log(widget);
+```
+
+
+  * You can also run the js code in RStudio:  
+    
+    1. place your cursor at any place of your js code.
+    
+    2. **Addins** > `apptest:`**Test js**
+
+### DOM
+
+  * <https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction>
+
+```{js}
+
+```
+
+
+## Plotly events
+
+### plotly click
+
+```{js}
+widget.on("plotly_click", function(eventData){
+  eda_click=eventData;
+  console.log(eventData);
+  console.log(eda_click.points[0].data.legendgroup)
+})
+
+```
+
+
+## modebar buttons
+
+```{r}
+htmltools::includeScript("https://raw.githubusercontent.com/plotly/plotly.js/master/src/components/modebar/buttons.js") |>
+  econIDV::showWidget()
+```
+
+```{js}
+var modeBarButtons = module.exports = {};
+
+/**
+ * ModeBar buttons configuration
+ *
+ * @param {string} name
+ *      name / id of the buttons (for tracking)
+ * @param {string} title
+ *      text that appears while hovering over the button,
+ *      enter null, false or '' for no hover text
+ * @param {string} icon
+ *      svg icon object associated with the button
+ *      can be linked to Plotly.Icons to use the default plotly icons
+ * @param {string} [gravity]
+ *      icon positioning
+ * @param {function} click
+ *      click handler associated with the button, a function of
+ *      'gd' (the main graph object) and
+ *      'ev' (the event object)
+ * @param {string} [attr]
+ *      attribute associated with button,
+ *      use this with 'val' to keep track of the state
+ * @param {*} [val]
+ *      initial 'attr' value, can be a function of gd
+ * @param {boolean} [toggle]
+ *      is the button a toggle button?
+ */
+modeBarButtons.toImage = {
+    name: 'toImage',
+    title: function(gd) {
+        var opts = gd._context.toImageButtonOptions || {};
+        var format = opts.format || 'png';
+        return format === 'png' ?
+            _(gd, 'Download plot as a png') : // legacy text
+            _(gd, 'Download plot'); // generic non-PNG text
+    },
+    icon: Icons.camera,
+    click: function(gd) {
+        var toImageButtonOptions = gd._context.toImageButtonOptions;
+        var opts = {format: toImageButtonOptions.format || 'png'};
+
+        Lib.notifier(_(gd, 'Taking snapshot - this may take a few seconds'), 'long');
+
+        if(opts.format !== 'svg' && Lib.isIE()) {
+            Lib.notifier(_(gd, 'IE only supports svg.  Changing format to svg.'), 'long');
+            opts.format = 'svg';
+        }
+
+        ['filename', 'width', 'height', 'scale'].forEach(function(key) {
+            if(key in toImageButtonOptions) {
+                opts[key] = toImageButtonOptions[key];
+            }
+        });
+
+        Registry.call('downloadImage', gd, opts)
+          .then(function(filename) {
+              Lib.notifier(_(gd, 'Snapshot succeeded') + ' - ' + filename, 'long');
+          })
+          .catch(function() {
+              Lib.notifier(_(gd, 'Sorry, there was a problem downloading your snapshot!'), 'long');
+          });
+    }
+};
+
+modeBarButtons.sendDataToCloud = {
+    name: 'sendDataToCloud',
+    title: function(gd) { return _(gd, 'Edit in Chart Studio'); },
+    icon: Icons.disk,
+    click: function(gd) {
+        Plots.sendDataToCloud(gd);
+    }
+};
+
+modeBarButtons.editInChartStudio = {
+    name: 'editInChartStudio',
+    title: function(gd) { return _(gd, 'Edit in Chart Studio'); },
+    icon: Icons.pencil,
+    click: function(gd) {
+        Plots.sendDataToCloud(gd);
+    }
+};
+
+modeBarButtons.zoom2d = {
+    name: 'zoom2d',
+    _cat: 'zoom',
+    title: function(gd) { return _(gd, 'Zoom'); },
+    attr: 'dragmode',
+    val: 'zoom',
+    icon: Icons.zoombox,
+    click: handleCartesian
+};
+
+```
+
